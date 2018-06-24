@@ -1,7 +1,7 @@
 const moment = require('moment')
 const config = require('../config')
 const Member = require('../models/member')
-
+const humanizeDuration = require('humanize-duration')
 module.exports = async (oldMember, newMember) =>{
   // variables
   var robot_log = client.channels.get(config['ROBOT_ANNOUNCE_CHANNEL_ID'])
@@ -10,7 +10,7 @@ module.exports = async (oldMember, newMember) =>{
 
   // functions
   function join_voice_channel () {
-    robot_log.send(`${member.displayName} join voice channel: ${newMember.voiceChannel.name}`)
+    // robot_log.send(`${member.displayName} join voice channel: ${newMember.voiceChannel.name}`)
     _member.lastestTimeEnterVoiceChannel = Date.now()
     _member.save()
   }
@@ -18,9 +18,18 @@ module.exports = async (oldMember, newMember) =>{
   function leave_voice_channel(){
     const now = moment()
     var tivc = now - _member.lastestTimeEnterVoiceChannel
-    robot_log.send(`${member.displayName} leave voice channel from ${oldMember.voiceChannel.name}, and stay ${tivc}`)
+    tivc = humanizeDuration(tivc)
     _member.lastestTimeLeaveVoiceChannel = now
     _member.save()
+
+    var msg = `${member.displayName} 從 **${oldMember.voiceChannel.name}** 離開了語音頻道
+這次待了 **${tivc}**
+總共待了 **${_member.secondsInVoiceChannel}**
+還剩下 **${_member.secondsLeft}** 可以使用
+---------------------------------------`
+    console.log(now.format())
+    console.log(msg)
+    robot_log.send(msg.trim().replace('\t',''))
   }
 
   // events
@@ -32,7 +41,7 @@ module.exports = async (oldMember, newMember) =>{
   }
   else {
     if ( oldMember.voiceChannel.id !== newMember.voiceChannel.id) {
-      robot_log.send(`${member.displayName} change voice channel, from ${oldMember.voiceChannel.name} to from ${newMember.voiceChannel.name}`)
+      // robot_log.send(`${member.displayName} change voice channel, from ${oldMember.voiceChannel.name} to from ${newMember.voiceChannel.name}`)
     }
     else {
       // other events

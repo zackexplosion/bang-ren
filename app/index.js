@@ -11,8 +11,10 @@ const events = {
 }
 const mongoose = require('mongoose')
 const Member = require('./models/member')
-mongoose.set('debug', true)
-mongoose.connect('mongodb://localhost/test')
+// mongoose.set('debug', true)
+
+const pjson = require('../package.json')
+mongoose.connect(`mongodb://localhost/${pjson.name}`)
 
 async function update_online_members(){
   var members_to_update = []
@@ -27,7 +29,7 @@ async function update_online_members(){
   Member.onlines = await Member.update_online_members(members_to_update)
   // return Member.onlines
   // console.log('now', moment())
-  console.log('Member.onlines', Member.onlines.length)
+  // console.log('Member.onlines', Member.onlines.length)
 }
 
 
@@ -42,7 +44,7 @@ client.on('ready', async ()  => {
     update_online_members()
   }, global.CHECK_INTERVAL )
 
-  console.log('online members', Member.onlines)
+  // console.log('online members', Member.onlines)
 
   client.is_ready = true
 
