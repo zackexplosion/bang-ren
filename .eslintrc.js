@@ -1,4 +1,8 @@
 module.exports = {
+    "globals": {
+        "client": true,
+        "redis": true
+    },
     "env": {
         "es6": true,
         "node": true
