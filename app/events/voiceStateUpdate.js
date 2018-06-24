@@ -1,39 +1,26 @@
 const moment = require('moment')
 const config = require('../config')
+const Member = require('../models/member')
 
-var USERS = {
-
-}
-module.exports = (oldMember, newMember) =>{
+module.exports = async (oldMember, newMember) =>{
   // variables
   var robot_log = client.channels.get(config['ROBOT_ANNOUNCE_CHANNEL_ID'])
-  var member = oldMember || newMember
+  var member = newMember || oldMember
+  let _member = await Member.find_or_create(member)
 
   // functions
   function join_voice_channel () {
-    var now = moment()
-    robot_log.send(`${member.displayName} join voice channel: ${newMember.voiceChannel.name} at ${now}`)
-    USERS[member.id] = {
-      timesInVoiceChannel: 0,
-      enterVoiceChannelAt: now
-    }
+    robot_log.send(`${member.displayName} join voice channel: ${newMember.voiceChannel.name}`)
+    _member.lastestTimeEnterVoiceChannel = Date.now()
+    _member.save()
   }
 
   function leave_voice_channel(){
-    if ( !USERS[member.id]) {
-      USERS[member.id] = {
-        timesInVoiceChannel: 0,
-        enterVoiceChannelAt: moment()
-      }
-    }
-
-    // console.log('id', oldMember.id)
-    var tivc = moment() - USERS[member.id]['enterVoiceChannelAt']
-    USERS[oldMember.id] = {
-      timesInVoiceChannel: tivc
-    }
-
+    const now = moment()
+    var tivc = now - _member.lastestTimeEnterVoiceChannel
     robot_log.send(`${member.displayName} leave voice channel from ${oldMember.voiceChannel.name}, and stay ${tivc}`)
+    _member.lastestTimeLeaveVoiceChannel = now
+    _member.save()
   }
 
   // events

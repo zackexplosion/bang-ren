@@ -1,58 +1,53 @@
-const util = require('util')
+// const moment = require('moment')
+// const util = require('util')
 const config = require('./config')
 const Discord = require('discord.js')
 const client = new Discord.Client()
+client.is_ready = false
+// set client as global
+global.client = client
 const events = {
   voiceStateUpdate: require('./events/voiceStateUpdate')
 }
 const mongoose = require('mongoose')
 const Member = require('./models/member')
+mongoose.set('debug', true)
 mongoose.connect('mongodb://localhost/test')
 
-function get_members_in_voice_channel(){
-  var map_by_guild = new Map()
-  var memeber_ids_to_search = []
+async function update_online_members(){
+  var members_to_update = []
   client.channels.find(c => {
     if ( c.type == 'voice' ) {
-      let map_by_member = new Map()
-
       c.members.array().forEach( _ => {
-        // let user = new User({
-        //   name: _.displayName,
-        //   guild_id: c.guild.id,
-        //   member_id: _.id,
-        //   lastestTimeEnterVoiceChannel: Date.now
-        // })
-        map_by_member.set(_.id, _)
-        memeber_ids_to_search.push(_.id)
+        _.current_channel_id = c.id
+        members_to_update.push(_)
       })
-      map_by_guild.set(c.guild.id, map_by_member)
     }
   })
-
-  var members = await Member.find({member_id: memeber_ids_to_search})
-  console.log(members)
-
-  return map_by_guild
+  Member.onlines = await Member.update_online_members(members_to_update)
+  // return Member.onlines
+  // console.log('now', moment())
+  console.log('Member.onlines', Member.onlines.length)
 }
 
-var is_ready = false
-client.on('ready', () => {
 
-  // set client as global
-  global.client = client
-  console.log(`Logged in as ${client.user.tag}!`)
+global.CHECK_INTERVAL = 5000
 
-  var mivc = get_members_in_voice_channel()
-  // function logMapElements(value, key) {
-  //   console.log(`m[${key}] = ${util.inspect(value, false, null)}`)
-  // }
+client.on('ready', async ()  => {
 
-  // mivc.forEach(logMapElements)
-  is_ready = true
-  // console.log(mivc)
-  // console.log(`${mivc.size} members in voice channel now`)
-  // c.send(`安安，我上線囉 ${moment().format('x')}`)
+  // const now = Date.now()
+  await update_online_members()
+
+  setInterval(function(){
+    update_online_members()
+  }, global.CHECK_INTERVAL )
+
+  console.log('online members', Member.onlines)
+
+  client.is_ready = true
+
+
+  console.log(`Logged in as ${client.user.tag}!, server ready`)
 })
 
 client.on('message', msg => {
@@ -62,7 +57,7 @@ client.on('message', msg => {
 })
 
 client.on('voiceStateUpdate', (oldMember, newMember) => {
-  if (is_ready) {
+  if (client.is_ready) {
     events.voiceStateUpdate(oldMember, newMember)
   }
 })
